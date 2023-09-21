@@ -5,12 +5,14 @@ function MergeComponents() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [addressValueMap, setAddressValueMap] = useState(new Map());
+  const [hasDuplicates, setHasDuplicates] = useState(false); // New state variable
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
     setError(null);
     setResult(null);
     setAddressValueMap(new Map());
+    setHasDuplicates(false); // Reset the duplicate state when input changes
   };
 
   const validateInput = () => {
@@ -26,13 +28,13 @@ function MergeComponents() {
 
       if (parts.length === 2) {
         const [address, value] = parts;
-        const intValue = parseInt(value, 10);
 
         if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
           errors.push(`Line ${i + 1}: Invalid Ethereum address: ${address}`);
-        } else if (isNaN(intValue)) {
-          errors.push(`Line ${i + 1}: Invalid value: ${value}`);
+        } else if (!/^\d+$/.test(value)) {
+          errors.push(`Line ${i + 1} wrong amount`);
         } else {
+          const intValue = parseInt(value, 10);
           if (newAddressValueMap.has(address)) {
             if (!duplicateAddresses.has(address)) {
               duplicateAddresses.set(address, [newAddressValueMap.get(address)]);
@@ -50,18 +52,58 @@ function MergeComponents() {
 
     // Check for duplicate addresses
     duplicateAddresses.forEach((lines, address) => {
-      errors.push(`Duplicate address ${address} found in lines: ${lines.join(', ')}`);
+      errors.push(`Address ${address} encountered duplicate in Line: ${lines.join(', ')}`);
     });
 
     if (errors.length > 0) {
-      setError(errors.join('\n'));
+      setError(errors.join('\n\n'));
       setResult(null);
       setAddressValueMap(new Map());
+      setHasDuplicates(true); // Set the duplicate state to true
     } else {
       setError(null);
       setResult(validAddresses);
       setAddressValueMap(newAddressValueMap);
+      setHasDuplicates(false); // Set the duplicate state to false
     }
+  };
+
+  const keepFirstOne = () => {
+    const lines = inputText.split('\n').filter((line) => line.trim() !== '');
+    const newLines = [];
+    const seenAddresses = new Set();
+
+    for (const line of lines) {
+      const [address] = line.split(/[=, ]+/);
+
+      if (!seenAddresses.has(address)) {
+        newLines.push(line);
+        seenAddresses.add(address);
+      }
+    }
+
+    setInputText(newLines.join('\n'));
+    setHasDuplicates(false); // Reset the duplicate state when clicking "Keep the first one"
+  };
+
+  const combineBalance = () => {
+    const lines = inputText.split('\n').filter((line) => line.trim() !== '');
+    const newAddressValueMap = new Map();
+
+    for (const line of lines) {
+      const [address, value] = line.split(/[=, ]+/);
+
+      if (!newAddressValueMap.has(address)) {
+        newAddressValueMap.set(address, 0);
+      }
+
+      newAddressValueMap.set(address, newAddressValueMap.get(address) + parseInt(value, 10));
+    }
+
+    const newLines = Array.from(newAddressValueMap.entries()).map(([address, value]) => `${address}=${value}`);
+
+    setInputText(newLines.join('\n'));
+    setHasDuplicates(false); // Reset the duplicate state when clicking "Combine Balance"
   };
 
   return (
@@ -77,46 +119,45 @@ function MergeComponents() {
           onChange={handleInputChange}
         />
         <p style={{ textAlign: 'left', color: 'grey', fontSize: '0.8rem', fontWeight: '500' }}>
-        Separate by ',' or '='
+          Separate by ',' or '='
         </p>
       </div>
 
-      {error && (
+      {/* Conditionally render the "Keep the first one" and "Combine Balance" buttons */}
+      {hasDuplicates && (
         <div className="row">
           <div className="col text-left" style={{ color: "red", textAlign: "left" }}>
             Duplicate
           </div>
           <div className="col text-right" style={{ color: "red", textAlign: "right" }}>
-            Keep the first line | Combine Balance
+            <button className="btn btn-danger" onClick={keepFirstOne}>
+              Keep the first one
+            </button>
+            <button className="btn btn-primary ms-2" onClick={combineBalance}>
+              Combine Balance
+            </button>
           </div>
-          <div className="alert alert-danger mt-3" role="alert">
-            <span className='me-3'><i className="fa fa-exclamation-circle" aria-hidden="true"></i></span>
-            {error}
-          </div>
+        </div>
+      )}
+
+      {hasDuplicates && error && (
+        <div className="alert alert-danger mt-3" role="alert">
+          <span className='me-3'><i className="fa fa-exclamation-circle" aria-hidden="true"></i></span>
+          {error.split('\n\n').map((errorMessage, index) => (
+            <div key={index}>
+              {errorMessage}
+            </div>
+          ))}
         </div>
       )}
 
       {result && (
-        <div className="alert alert-success mt-3 " role="alert">
-          <span className='me-3'><i className="fa fa-check-circle" aria-hidden="true"></i></span>
-          Input is valid. You can perform further actions here.
-        </div>
-      )}
-
-      {result && (
-        <div className="result mt-3">
-          <h5>Result:</h5>
-          <pre>{JSON.stringify(result, null, 2)}</pre>
-        </div>
-      )}
-
-      {result && (
-        <div className="result mt-3">
-          <h5>Processed Address-Value Pairs:</h5>
-          <ul>
-            {Array.from(addressValueMap).map(([address, value]) => (
+        <div className="result mt-3" style={{textAlign:"left"}}>
+          <h5>Address:</h5>
+          <ul style={{ listStyleType: 'none', textAlign:"left"}}>
+            {Array.from(addressValueMap.keys()).map((address) => (
               <li key={address}>
-                Address: {address}, Value: {value}
+                {address}
               </li>
             ))}
           </ul>
@@ -131,5 +172,3 @@ function MergeComponents() {
 }
 
 export default MergeComponents;
-
-
