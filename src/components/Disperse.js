@@ -130,12 +130,12 @@ function MergeComponents() {
             Duplicate
           </div>
           <div className="col text-right" style={{ color: "red", textAlign: "right" }}>
-            <button className="btn btn-danger" onClick={keepFirstOne}>
-              Keep the first one
-            </button>
-            <button className="btn btn-primary ms-2" onClick={combineBalance}>
-              Combine Balance
-            </button>
+            <span className="" onClick={keepFirstOne}>
+              Keep the first one |
+            </span>
+            <span className="" onClick={combineBalance}>
+                Combine Balance
+            </span>
           </div>
         </div>
       )}
@@ -164,7 +164,7 @@ function MergeComponents() {
         </div>
       )}
 
-      <button className="btn btn-primary mt-3 w-100" style={{ background: "purple", color: "white" }} onClick={validateInput}>
+      <button className="btn btn-primary mt-3 w-100" style={{color: "white" }} onClick={validateInput}>
         Next
       </button>
     </div>
